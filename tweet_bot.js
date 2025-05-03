@@ -45,21 +45,29 @@ async function runBot() {
 
   try {
     console.log("Opening Twitter login page...");
-    // Increased timeout for page navigation and better load handling
     await page.goto('https://twitter.com/login', {
-      waitUntil: 'networkidle0', // Wait for the page to be idle
-      timeout: 120000 // 2 minutes for navigation
+      waitUntil: 'networkidle0',
+      timeout: 120000
     });
+
     await page.waitForSelector('input[name="text"]', { timeout: 10000 });
 
     console.log("Entering username...");
-    // Enter the username
     await page.type('input[name="text"]', process.env.TWITTER_USERNAME);
     await page.click('div[role="button"]'); // Click next button after entering username
     await page.waitForTimeout(2000); // Wait for the next page
 
-    console.log("Entering password...");
-    // Wait for the password field to appear
+    // Check if there's a security question to add a phone or username
+    try {
+      await page.waitForSelector('div[data-testid="PhoneOrUsernameNext"]', { timeout: 5000 });
+      console.log("Security question detected, adding username...");
+      await page.click('div[data-testid="PhoneOrUsernameNext"]'); // Click to add username
+      await page.waitForTimeout(2000); // Wait for the next page
+    } catch (err) {
+      console.log("No security question detected.");
+    }
+
+    console.log("Proceeding to next step...");
     await page.waitForSelector('input[type="password"]', { timeout: 10000 });
     await page.type('input[type="password"]', process.env.TWITTER_PASSWORD);
     await page.click('div[role="button"]'); // Click sign in button after entering password

@@ -38,6 +38,7 @@ async function clickButtonByText(page, text) {
   const buttons = await page.$$eval('button', (buttons, text) => {
     return buttons.map(button => {
       return {
+        element: button,
         text: button.innerText.trim(),
         visible: button.offsetParent !== null // Check if button is visible
       };
@@ -49,7 +50,9 @@ async function clickButtonByText(page, text) {
     buttons.forEach((btn, index) => {
       console.log(`Button ${index + 1}: "${btn.text}"`);
     });
-    await buttons[0].click();
+
+    // Click the first button that matches
+    await page.evaluate(button => button.element.click(), buttons[0]);
     console.log(`Clicked button with text: ${text}`);
   } else {
     console.log(`No visible button found with text: "${text}"`);
@@ -80,21 +83,17 @@ async function runBot() {
     await page.waitForTimeout(2000);
 
     console.log("Looking for 'Next' button...");
-    await clickButtonByText(page, "Next");
+    await clickButtonByText(page, 'Next');
 
-    // If a security question appears (like phone or username), answer with username
-    await page.waitForSelector('input[name="username"]', { timeout: 10000 }).catch(() => null);
-    if (await page.$('input[name="username"]')) {
-      console.log("Answering security question with username...");
-      await page.type('input[name="username"]', process.env.TWITTER_USERNAME);
-      await page.waitForTimeout(2000);
-      await clickButtonByText(page, "Next");
-    }
+    // If a security question is prompted, input the username
+    await page.waitForSelector('input[name="username"]', { timeout: 10000 }).catch(async () => {
+      console.log("No security prompt, proceeding to password...");
+    });
 
     console.log("Entering password...");
-    await page.waitForSelector('input[name="password"]', { timeout: 10000 });
     await page.type('input[name="password"]', process.env.TWITTER_PASSWORD);
-    await page.click('div[role="button"]'); // Click the Login button
+    await page.keyboard.press('Enter');
+    await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 120000 });
 
     console.log("Logged in, starting to search for keywords...");
     for (const keyword of KEYWORDS) {

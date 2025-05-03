@@ -106,6 +106,15 @@ async function runBot() {
         await page.click('div[role="dialog"] div[data-testid="tweetButton"]');
 
         console.log("Reply posted. Waiting for the next tweet...");
+        
+        // Get tweet URL and log where the reply was posted
+        const tweetUrl = await page.evaluate(tweet => {
+          const link = tweet.querySelector('a[href^="/status"]');
+          return link ? `https://twitter.com${link.getAttribute('href')}` : null;
+        }, tweet);
+        
+        console.log(`Reply posted on tweet: ${tweetUrl}`);
+        
         await page.waitForTimeout(3000);
       }
     }

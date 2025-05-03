@@ -51,8 +51,8 @@ async function clickButtonByText(page, text) {
       console.log(`Button ${index + 1}: "${btn.text}"`);
     });
 
-    // Click the first button that matches
-    await page.evaluate(button => button.element.click(), buttons[0]);
+    // Click the first button that matches using page.evaluate to click the element
+    await page.evaluate(button => button.element.click(), buttons[0].element);
     console.log(`Clicked button with text: ${text}`);
   } else {
     console.log(`No visible button found with text: "${text}"`);

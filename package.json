@@ -1,0 +1,14 @@
+{
+  "name": "twitter-comment-bot",
+  "version": "1.0.0",
+  "description": "Twitter comment bot for Inovact Social awareness",
+  "main": "tweet_bot.js",
+  "scripts": {
+    "start": "node tweet_bot.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.8",
+    "dotenv": "^16.3.1",
+    "puppeteer": "^21.3.8"
+  }
+}

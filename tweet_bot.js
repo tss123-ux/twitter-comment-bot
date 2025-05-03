@@ -19,7 +19,7 @@ CTA for recruiters: Check Inovact Opportunities at https://inovact-opportunity.v
 `;
 
   const res = await axios.post(
-    'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
     {
       contents: [{ role: "user", parts: [{ text: prompt }] }]
     },

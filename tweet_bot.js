@@ -36,7 +36,7 @@ CTA for recruiters: Check Inovact Opportunities at https://inovact-opportunity.v
 
 async function clickButtonByText(page, text) {
   const buttons = await page.$$eval('button', buttons =>
-    buttons.filter(button => button.innerText.toLowerCase().includes(text.toLowerCase()))
+    buttons.filter(button => button.innerText && button.innerText.toLowerCase().includes(text.toLowerCase()))
   );
   if (buttons.length > 0) {
     await buttons[0].click();

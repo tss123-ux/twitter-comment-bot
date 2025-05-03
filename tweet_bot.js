@@ -34,6 +34,18 @@ CTA for recruiters: Check Inovact Opportunities at https://inovact-opportunity.v
   return res.data.candidates[0].content.parts[0].text.trim();
 }
 
+async function clickButtonByText(page, text) {
+  const buttons = await page.$$eval('button', buttons =>
+    buttons.filter(button => button.innerText.toLowerCase().includes(text.toLowerCase()))
+  );
+  if (buttons.length > 0) {
+    await buttons[0].click();
+    console.log(`Clicked button with text: ${text}`);
+  } else {
+    console.log(`No button found with text: ${text}`);
+  }
+}
+
 async function runBot() {
   const browser = await puppeteer.launch({
     headless: 'new', // Opt-in to new headless mode
@@ -54,14 +66,14 @@ async function runBot() {
 
     console.log("Entering username...");
     await page.type('input[name="text"]', process.env.TWITTER_USERNAME);
-    await page.click('div[role="button"]'); // Click next button after entering username
+    await clickButtonByText(page, "Next");
     await page.waitForTimeout(2000); // Wait for the next page
 
     // Check if there's a security question to add a phone or username
     try {
       await page.waitForSelector('div[data-testid="PhoneOrUsernameNext"]', { timeout: 5000 });
       console.log("Security question detected, adding username...");
-      await page.click('div[data-testid="PhoneOrUsernameNext"]'); // Click to add username
+      await clickButtonByText(page, "Next"); // Click to add username
       await page.waitForTimeout(2000); // Wait for the next page
     } catch (err) {
       console.log("No security question detected.");
@@ -70,7 +82,8 @@ async function runBot() {
     console.log("Proceeding to next step...");
     await page.waitForSelector('input[type="password"]', { timeout: 10000 });
     await page.type('input[type="password"]', process.env.TWITTER_PASSWORD);
-    await page.click('div[role="button"]'); // Click sign in button after entering password
+    await clickButtonByText(page, "Log in");
+
     await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 120000 });
 
     console.log("Logged in, starting to search for keywords...");

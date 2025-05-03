@@ -36,60 +36,81 @@ CTA for recruiters: Check Inovact Opportunities at https://inovact-opportunity.v
 
 async function runBot() {
   const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
+    headless: 'new', // Opt-in to new headless mode
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    defaultViewport: null // Ensures you have full page view if needed
   });
 
   const page = await browser.newPage();
 
   try {
-    // Increased timeout to 60 seconds for navigation
+    console.log("Opening Twitter login page...");
+    // Increased timeout for page navigation and better load handling
     await page.goto('https://twitter.com/login', {
-      waitUntil: 'load', // Wait for the page to fully load
-      timeout: 60000 // Increased timeout
+      waitUntil: 'networkidle0', // Wait for the page to be idle
+      timeout: 120000 // 2 minutes for navigation
     });
-    await page.waitForSelector('input[name="text"]');
+    await page.waitForSelector('input[name="text"]', { timeout: 10000 });
 
+    console.log("Logging in with username...");
     await page.type('input[name="text"]', process.env.TWITTER_USERNAME);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(2000);
 
+    console.log("Entering password...");
     await page.type('input[name="password"]', process.env.TWITTER_PASSWORD);
     await page.keyboard.press('Enter');
-    await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 60000 }); // Increased timeout for navigation
+    await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 120000 });
 
+    console.log("Logged in, starting to search for keywords...");
     for (const keyword of KEYWORDS) {
+      console.log(`Searching for tweets with keyword: ${keyword}`);
       await page.goto(`https://twitter.com/search?q=${encodeURIComponent(keyword)}%20lang%3Aen&src=typed_query&f=live`, {
-        waitUntil: 'load',
-        timeout: 60000 // Increased timeout for search page load
+        waitUntil: 'networkidle0',
+        timeout: 120000
       });
 
-      await page.waitForSelector('article', { timeout: 10000 });
+      await page.waitForSelector('article', { timeout: 20000 });
 
       const tweets = await page.$$('article');
+
+      if (tweets.length === 0) {
+        console.log("No tweets found for the keyword.");
+        continue;
+      }
 
       for (let i = 0; i < Math.min(tweets.length, 5); i++) {
         const tweet = tweets[i];
 
         const textHandle = await tweet.$('div[lang]');
-        if (!textHandle) continue;
+        if (!textHandle) {
+          console.log("No tweet text found.");
+          continue;
+        }
 
         const tweetText = await page.evaluate(el => el.innerText, textHandle);
+        console.log(`Tweet Text: ${tweetText}`);
+        
         const reply = await generateComment(tweetText);
+        console.log(`Generated Reply: ${reply}`);
 
         const replyBtn = await tweet.$('div[data-testid="reply"]');
-        if (!replyBtn) continue;
+        if (!replyBtn) {
+          console.log("No reply button found.");
+          continue;
+        }
 
         await replyBtn.click();
         await page.waitForSelector('div[role="dialog"] div[contenteditable="true"]', { timeout: 5000 });
         await page.type('div[role="dialog"] div[contenteditable="true"]', reply);
         await page.click('div[role="dialog"] div[data-testid="tweetButton"]');
 
+        console.log("Reply posted. Waiting for the next tweet...");
         await page.waitForTimeout(3000);
       }
     }
   } catch (error) {
-    console.error("Navigation or Timeout Error:", error);
+    console.error("Error during bot execution:", error);
   } finally {
     await browser.close();
   }

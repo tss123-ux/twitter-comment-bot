@@ -35,14 +35,24 @@ CTA for recruiters: Check Inovact Opportunities at https://inovact-opportunity.v
 }
 
 async function clickButtonByText(page, text) {
-  const buttons = await page.$$eval('button', buttons =>
-    buttons.filter(button => button.innerText && button.innerText.toLowerCase().includes(text.toLowerCase()))
-  );
+  const buttons = await page.$$eval('button', (buttons, text) => {
+    return buttons.map(button => {
+      return {
+        text: button.innerText.trim(),
+        visible: button.offsetParent !== null // Check if button is visible
+      };
+    }).filter(button => button.text.toLowerCase().includes(text.toLowerCase()) && button.visible);
+  }, text);
+
   if (buttons.length > 0) {
+    console.log(`Found ${buttons.length} buttons with text including "${text}":`);
+    buttons.forEach((btn, index) => {
+      console.log(`Button ${index + 1}: "${btn.text}"`);
+    });
     await buttons[0].click();
     console.log(`Clicked button with text: ${text}`);
   } else {
-    console.log(`No button found with text: ${text}`);
+    console.log(`No visible button found with text: "${text}"`);
   }
 }
 
@@ -57,34 +67,34 @@ async function runBot() {
 
   try {
     console.log("Opening Twitter login page...");
+    // Increased timeout for page navigation and better load handling
     await page.goto('https://twitter.com/login', {
-      waitUntil: 'networkidle0',
-      timeout: 120000
+      waitUntil: 'networkidle0', // Wait for the page to be idle
+      timeout: 120000 // 2 minutes for navigation
     });
-
     await page.waitForSelector('input[name="text"]', { timeout: 10000 });
 
     console.log("Entering username...");
     await page.type('input[name="text"]', process.env.TWITTER_USERNAME);
-    await clickButtonByText(page, "Next");
-    await page.waitForTimeout(2000); // Wait for the next page
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(2000);
 
-    // Check if there's a security question to add a phone or username
-    try {
-      await page.waitForSelector('div[data-testid="PhoneOrUsernameNext"]', { timeout: 5000 });
-      console.log("Security question detected, adding username...");
-      await clickButtonByText(page, "Next"); // Click to add username
-      await page.waitForTimeout(2000); // Wait for the next page
-    } catch (err) {
-      console.log("No security question detected.");
+    console.log("Looking for 'Next' button...");
+    await clickButtonByText(page, "Next");
+
+    // If a security question appears (like phone or username), answer with username
+    await page.waitForSelector('input[name="username"]', { timeout: 10000 }).catch(() => null);
+    if (await page.$('input[name="username"]')) {
+      console.log("Answering security question with username...");
+      await page.type('input[name="username"]', process.env.TWITTER_USERNAME);
+      await page.waitForTimeout(2000);
+      await clickButtonByText(page, "Next");
     }
 
-    console.log("Proceeding to next step...");
-    await page.waitForSelector('input[type="password"]', { timeout: 10000 });
-    await page.type('input[type="password"]', process.env.TWITTER_PASSWORD);
-    await clickButtonByText(page, "Log in");
-
-    await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 120000 });
+    console.log("Entering password...");
+    await page.waitForSelector('input[name="password"]', { timeout: 10000 });
+    await page.type('input[name="password"]', process.env.TWITTER_PASSWORD);
+    await page.click('div[role="button"]'); // Click the Login button
 
     console.log("Logged in, starting to search for keywords...");
     for (const keyword of KEYWORDS) {

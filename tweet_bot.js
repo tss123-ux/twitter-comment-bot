@@ -36,51 +36,63 @@ CTA for recruiters: Check Inovact Opportunities at https://inovact-opportunity.v
 
 async function runBot() {
   const browser = await puppeteer.launch({
-  headless: true,
-  args: ['--no-sandbox', '--disable-setuid-sandbox']
-});
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  });
 
   const page = await browser.newPage();
 
-  await page.goto('https://twitter.com/login');
-  await page.waitForSelector('input[name="text"]');
+  try {
+    // Increased timeout to 60 seconds for navigation
+    await page.goto('https://twitter.com/login', {
+      waitUntil: 'load', // Wait for the page to fully load
+      timeout: 60000 // Increased timeout
+    });
+    await page.waitForSelector('input[name="text"]');
 
-  await page.type('input[name="text"]', process.env.TWITTER_USERNAME);
-  await page.keyboard.press('Enter');
-  await page.waitForTimeout(2000);
+    await page.type('input[name="text"]', process.env.TWITTER_USERNAME);
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(2000);
 
-  await page.type('input[name="password"]', process.env.TWITTER_PASSWORD);
-  await page.keyboard.press('Enter');
-  await page.waitForNavigation();
+    await page.type('input[name="password"]', process.env.TWITTER_PASSWORD);
+    await page.keyboard.press('Enter');
+    await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 60000 }); // Increased timeout for navigation
 
-  for (const keyword of KEYWORDS) {
-    await page.goto(`https://twitter.com/search?q=${encodeURIComponent(keyword)}%20lang%3Aen&src=typed_query&f=live`);
-    await page.waitForSelector('article', { timeout: 10000 });
+    for (const keyword of KEYWORDS) {
+      await page.goto(`https://twitter.com/search?q=${encodeURIComponent(keyword)}%20lang%3Aen&src=typed_query&f=live`, {
+        waitUntil: 'load',
+        timeout: 60000 // Increased timeout for search page load
+      });
 
-    const tweets = await page.$$('article');
+      await page.waitForSelector('article', { timeout: 10000 });
 
-    for (let i = 0; i < Math.min(tweets.length, 5); i++) {
-      const tweet = tweets[i];
+      const tweets = await page.$$('article');
 
-      const textHandle = await tweet.$('div[lang]');
-      if (!textHandle) continue;
+      for (let i = 0; i < Math.min(tweets.length, 5); i++) {
+        const tweet = tweets[i];
 
-      const tweetText = await page.evaluate(el => el.innerText, textHandle);
-      const reply = await generateComment(tweetText);
+        const textHandle = await tweet.$('div[lang]');
+        if (!textHandle) continue;
 
-      const replyBtn = await tweet.$('div[data-testid="reply"]');
-      if (!replyBtn) continue;
+        const tweetText = await page.evaluate(el => el.innerText, textHandle);
+        const reply = await generateComment(tweetText);
 
-      await replyBtn.click();
-      await page.waitForSelector('div[role="dialog"] div[contenteditable="true"]', { timeout: 5000 });
-      await page.type('div[role="dialog"] div[contenteditable="true"]', reply);
-      await page.click('div[role="dialog"] div[data-testid="tweetButton"]');
+        const replyBtn = await tweet.$('div[data-testid="reply"]');
+        if (!replyBtn) continue;
 
-      await page.waitForTimeout(3000);
+        await replyBtn.click();
+        await page.waitForSelector('div[role="dialog"] div[contenteditable="true"]', { timeout: 5000 });
+        await page.type('div[role="dialog"] div[contenteditable="true"]', reply);
+        await page.click('div[role="dialog"] div[data-testid="tweetButton"]');
+
+        await page.waitForTimeout(3000);
+      }
     }
+  } catch (error) {
+    console.error("Navigation or Timeout Error:", error);
+  } finally {
+    await browser.close();
   }
-
-  await browser.close();
 }
 
 runBot();

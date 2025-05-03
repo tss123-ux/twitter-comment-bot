@@ -35,7 +35,11 @@ CTA for recruiters: Check Inovact Opportunities at https://inovact-opportunity.v
 }
 
 async function runBot() {
-  const browser = await puppeteer.launch({ headless: true });
+  const browser = await puppeteer.launch({
+  headless: true,
+  args: ['--no-sandbox', '--disable-setuid-sandbox']
+});
+
   const page = await browser.newPage();
 
   await page.goto('https://twitter.com/login');

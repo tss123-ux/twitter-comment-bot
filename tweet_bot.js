@@ -58,7 +58,7 @@ async function runBot() {
     await page.waitForTimeout(2000);
 
     console.log("Entering password...");
-    await page.type('input[name="password"]', process.env.TWITTER_PASSWORD);
+    await page.type('input[name="Password"]', process.env.TWITTER_PASSWORD);
     await page.keyboard.press('Enter');
     await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 120000 });
 

@@ -52,14 +52,17 @@ async function runBot() {
     });
     await page.waitForSelector('input[name="text"]', { timeout: 10000 });
 
-    console.log("Logging in with username...");
+    console.log("Entering username...");
+    // Enter the username
     await page.type('input[name="text"]', process.env.TWITTER_USERNAME);
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(2000);
+    await page.click('div[role="button"]'); // Click next button after entering username
+    await page.waitForTimeout(2000); // Wait for the next page
 
     console.log("Entering password...");
-    await page.type('input[name="Password"]', process.env.TWITTER_PASSWORD);
-    await page.keyboard.press('Enter');
+    // Wait for the password field to appear
+    await page.waitForSelector('input[type="password"]', { timeout: 10000 });
+    await page.type('input[type="password"]', process.env.TWITTER_PASSWORD);
+    await page.click('div[role="button"]'); // Click sign in button after entering password
     await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 120000 });
 
     console.log("Logged in, starting to search for keywords...");
